@@ -15,7 +15,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/api/mahasiswa', mahasiswaRoutes);
 app.use('/api/dosen', dosenRoutes);
 app.use('/api/pendaftaran', pendaftaranRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/user', userRoutes); // Tambahkan rute user
 
 app.use(express.static(path.join(__dirname, '../dist')));
 
