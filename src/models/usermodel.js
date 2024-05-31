@@ -1,8 +1,8 @@
-const db = require('../config/mysql');
+const database = require('../config/mysql');
 
 const User = {
     create: (newUser, result) => {
-        db.query("INSERT INTO users SET ?", newUser, (err, res) => {
+        database.query("INSERT INTO users SET ?", newUser, (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 result(err, null);
@@ -12,7 +12,7 @@ const User = {
         });
     },
     findByEmail: (email, result) => {
-        db.query("SELECT * FROM users WHERE email = ?", [email], (err, res) => {
+        database.query("SELECT * FROM users WHERE email = ?", [email], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 result(err, null);

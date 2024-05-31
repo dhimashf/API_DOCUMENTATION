@@ -9,39 +9,40 @@ exports.register = (req, res) => {
     // Check if the email already exists in the database
     User.findByEmail(email, (err, existingUser) => {
         if (err) {
-            if (err.kind === "not_found") {
-                // Hash the password before storing it
-                bcrypt.hash(password, 10, (err, hashedPassword) => {
-                    if (err) {
-                        console.error("Error hashing password:", err);
-                        return res.status(500).send({ message: "Error hashing password." });
-                    }
+            console.error("Error checking email:", err);
+            return res.status(500).send({ message: "Error checking email." });
+        }
 
-                    // If the email does not exist, proceed with registration
-                    const newUser = {
-                        email: email,
-                        password: hashedPassword
-                    };
-
-                    User.create(newUser, (err, data) => {
-                        if (err) {
-                            console.error("Error registering user:", err);
-                            return res.status(500).send({ message: "Error registering user." });
-                        }
-                        console.log("User registered successfully:", data);
-                        res.status(201).send({ message: "User registered successfully!" });
-                    });
-                });
-            } else {
-                console.error("Error checking email:", err);
-                return res.status(500).send({ message: "Error checking email." });
-            }
-        } else {
+        if (existingUser) {
             console.log("Email already exists:", email);
             return res.status(400).send({ message: "Email already exists!" });
         }
+
+        // Hash the password before storing it
+        bcrypt.hash(password, 10, (err, hashedPassword) => {
+            if (err) {
+                console.error("Error hashing password:", err);
+                return res.status(500).send({ message: "Error hashing password." });
+            }
+
+            // If the email does not exist, proceed with registration
+            const newUser = {
+                email: email,
+                password: hashedPassword
+            };
+
+            User.create(newUser, (err, data) => {
+                if (err) {
+                    console.error("Error registering user:", err);
+                    return res.status(500).send({ message: "Error registering user." });
+                }
+                console.log("User registered successfully:", data);
+                res.status(201).send({ message: "User registered successfully!" });
+            });
+        });
     });
 };
+
 
 exports.login = (req, res) => {
     const { email, password } = req.body;
@@ -56,32 +57,41 @@ exports.login = (req, res) => {
             return res.status(404).send({ message: "User not found." });
         }
 
-        if (password !== user.password) { // Ganti bcrypt dengan perbandingan biasa
-            return res.status(401).send({ message: "Invalid Password!" });
-        }
+        // Membandingkan password yang diterima dengan password di database
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (err) {
+                console.error("Error comparing passwords:", err);
+                return res.status(500).send({ message: "Error comparing passwords." });
+            }
 
-        // Create token with user's email and password
-        const tokenPayload = {
-            id: user.id,
-            email: user.email,
-            password: user.password
-        };
+            if (!result) {
+                return res.status(401).send({ message: "Invalid Password!" });
+            }
 
-        const tokenOptions = {
-            expiresIn: 86400 // 24 hours
-        };
+            // Create token with user's email and password
+            const tokenPayload = {
+                id: user.id,
+                email: user.email
+            };
 
-        const token = jwt.sign(tokenPayload, JWT_SECRET, tokenOptions);
+            const tokenOptions = {
+                expiresIn: 86400 // 24 hours
+            };
 
-        // Send token and user info as response
-        res.status(200).send({
-            message: "Login successfully", // Tambahkan pesan sukses login
-            id: user.id,
-            email: user.email,
-            token: token
+            const token = jwt.sign(tokenPayload, JWT_SECRET, tokenOptions);
+
+            // Send token and user info as response
+            res.status(200).send({
+                message: "Login successfully",
+                id: user.id,
+                email: user.email,
+                token: token
+            });
         });
     });
 };
+
+
 
 // Protected route handler
 exports.protectedRoute = (req, res) => {
@@ -89,6 +99,5 @@ exports.protectedRoute = (req, res) => {
         message: "Access granted",
         userId: req.userId,
         email: req.email,
-        password: req.password
     });
 };
