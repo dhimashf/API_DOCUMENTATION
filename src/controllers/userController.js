@@ -9,37 +9,37 @@ exports.register = (req, res) => {
     // Check if the email already exists in the database
     User.findByEmail(email, (err, existingUser) => {
         if (err) {
-            console.error("Error checking email:", err);
-            return res.status(500).send({ message: "Error checking email." });
-        }
+            if (err.kind === "not_found") {
+                // Hash the password before storing it
+                bcrypt.hash(password, 10, (err, hashedPassword) => {
+                    if (err) {
+                        console.error("Error hashing password:", err);
+                        return res.status(500).send({ message: "Error hashing password." });
+                    }
 
-        if (existingUser) {
+                    // If the email does not exist, proceed with registration
+                    const newUser = {
+                        email: email,
+                        password: hashedPassword
+                    };
+
+                    User.create(newUser, (err, data) => {
+                        if (err) {
+                            console.error("Error registering user:", err);
+                            return res.status(500).send({ message: "Error registering user." });
+                        }
+                        console.log("User registered successfully:", data);
+                        res.status(201).send({ message: "User registered successfully!" });
+                    });
+                });
+            } else {
+                console.error("Error checking email:", err);
+                return res.status(500).send({ message: "Error checking email." });
+            }
+        } else {
             console.log("Email already exists:", email);
             return res.status(400).send({ message: "Email already exists!" });
         }
-
-        // Hash the password before storing it
-        bcrypt.hash(password, 10, (err, hashedPassword) => {
-            if (err) {
-                console.error("Error hashing password:", err);
-                return res.status(500).send({ message: "Error hashing password." });
-            }
-
-            // If the email does not exist, proceed with registration
-            const newUser = {
-                email: email,
-                password: hashedPassword
-            };
-
-            User.create(newUser, (err, data) => {
-                if (err) {
-                    console.error("Error registering user:", err);
-                    return res.status(500).send({ message: "Error registering user." });
-                }
-                console.log("User registered successfully:", data);
-                res.status(201).send({ message: "User registered successfully!" });
-            });
-        });
     });
 };
 
@@ -99,5 +99,6 @@ exports.protectedRoute = (req, res) => {
         message: "Access granted",
         userId: req.userId,
         email: req.email,
+        password: req.password,
     });
 };
